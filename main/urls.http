@@ -1,0 +1,7 @@
+@host = http://localhost:3031
+
+###
+GET {{host}}/bot/get-spy-reports
+
+###
+GET {{host}}/bot/sort-spy-reports

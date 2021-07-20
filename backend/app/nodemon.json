@@ -1,0 +1,31 @@
+{
+  "restartable": "rs",
+  "colours": true,
+  "ignore": [
+    ".git",
+    "node_modules/**/node_modules",
+    "logs/*",
+    "docs/*",
+    "README"
+  ],
+  "verbose": true,
+  "execMap": {
+    "js": "node --harmony"
+  },
+  "watch": [
+    "app/"
+  ],
+  "env": {
+    "NODE_ENV": "development",
+    "APP_ENV": "local",
+    "LOG_LEVEL": "debug",
+    "PORT": 3031,
+    "EMAIL": "vatomasic@gmail.com",
+    "PASSWORD": "strongh0ld",
+    "SERVER_LANGUAGE": "de",
+    "SERVER_NUMBER": 105,
+    "LOOT_PERCENTAGE": 0.75,
+    "SMALL_CARGO_STORAGE": 7000
+  },
+  "ext": "js,json,ts"
+}

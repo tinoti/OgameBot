@@ -1,0 +1,12 @@
+{"message":"Log level set to undefined","level":"debug","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:15:40"}
+{"message":"OgameBot listening on port 3031 | PID: 1232","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:15:40"}
+{"message":"Log level set to undefined","level":"debug","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:16:07"}
+{"message":"OgameBot listening on port 3031 | PID: 12504","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:16:07"}
+{"message":"Log level set to debug","level":"debug","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:18:35"}
+{"message":"OgameBot listening on port 3031 | PID: 3452","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:18:35"}
+{"message":"Successfully logged in with account: vatomasic@gmail.com","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:18:35"}
+{"message":"Successfully logged in to server: https://s105-de.ogame.gameforge.com/game/lobbylogin.php?id=343517&token=bf5bf615-fdf1-4637-b857-19eb6ffc3164","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:18:36"}
+{"message":"Successfully started puppeteer page","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:18:41"}
+{"message":"Setup complete!","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:18:41"}
+{"message":"Requested resource: GET http://localhost:3031/bot/reports-id | Request-Id: undefined","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:20:03"}
+{"message":"Requested resource: GET http://localhost:3031/bot/reports-id | Request-Id: undefined","level":"info","service":"OgameBot","label":"app.js","timestamp":"20.07.2021 15:20:49"}

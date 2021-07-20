@@ -1,0 +1,23 @@
+<button (click)="click()">Klikni</button>
+<br>
+
+<input placeholder="Galaxy" type="text" [(ngModel)]="galaxy">
+
+<input placeholder="System from" type="text" [(ngModel)]="systemFrom">
+
+<input placeholder="System to" type="text" [(ngModel)]="systemTo">
+
+<button (click)="login()">Login</button>
+
+<button (click)="spy()">Spy</button>
+
+<button (click)="getSpyReports()">Reports</button>
+
+<button (click)="attack()">Attack</button>
+
+<button (click)="checkHostileFleet()">Check hostile fleet</button>
+
+
+<ul *ngIf="sortedList">
+  <li *ngFor="let item of sortedList">{{item.galaxy}} {{item.system}} {{item.position}} {{item.playerName}} {{item.status}}</li>
+</ul>
