@@ -223,7 +223,8 @@ const getFleetSlotsInfo = async () => {
     attack: 0,
     spy: 0,
     colonisation: 0,
-    transport: 0
+    transport: 0,
+    expedition: 0
   }
 
   $(".eventFleet").each((index, fleet) => {
@@ -233,6 +234,7 @@ const getFleetSlotsInfo = async () => {
     if (fleetText === "Eigene Flotte | Kolonisieren (R)") fleetSlotsInfo.colonisation++
     if (fleetText === "Eigene Flotte | Spionage (R)") fleetSlotsInfo.spy++
     if (fleetText === "Eigene Flotte | Transport (R)") fleetSlotsInfo.transport++
+    if (fleetText === "Eigene Flotte | Expedition (R)") fleetSlotsInfo.expedition++
   })
 
   return fleetSlotsInfo
@@ -273,16 +275,23 @@ const getInactiveTargets = async () => {
 
 const spyAndAttack = async () => {
 
-  const inactiveTargets = (await getInactiveTargets()).filter(o => o.galaxy === 3 && o.system > 120)
-  console.log(inactiveTargets)
+  const mainPlanetId = "39364811"
+  const colonyId = "39367010"
+
+  let activePlanetId = "39364811"
+
+  const inactiveTargets = (await getInactiveTargets()).filter(o => o.galaxy > 1)
 
   while (true) {
+
 
     //Get and filter reports
     //TODO: delete all invalid reports
     const reports = (await sortSpyReports()).filter(o => o.availableLoot > 3000000)
 
     const fleetSlots = await getFleetSlotsInfo()
+
+
 
     // If there is no valid targets, send spy probe to next target
     if (reports.length === 0) {
@@ -301,8 +310,24 @@ const spyAndAttack = async () => {
       }
     }
 
+
     const fleetComposition = await attackRequest.getFleetInfoEvent()
     if (reports.length > 0 && fleetSlots.attack + fleetSlots.colonisation + fleetSlots.transport < process.env.FLEET_SLOTS - 1 && fleetComposition.smallTransporter > reports[0].numberOfShipsNeeded) {
+      // Set active planet to the target galaxy
+      if(reports[0].galaxy === "3" && activePlanetId != mainPlanetId)  {
+        console.log("HERE")
+        activePlanetId = mainPlanetId
+        await attackRequest.setActivePlanet(mainPlanetId)
+      }
+      if(reports[0].galaxy === "2" && activePlanetId != colonyId) {
+        console.log("HERE BEFORE SETING ACTIVE PLANET GALAXY 2")
+        activePlanetId = colonyId
+        await attackRequest.setActivePlanet(colonyId)
+      }
+      console.log("REPORT")
+      console.log(reports[0].galaxy)
+      console.log(activePlanetId)
+
       const attackResult = JSON.parse(await attackRequest.attack(reports[0].galaxy, reports[0].system, reports[0].position, reports[0].numberOfShipsNeeded, token))
       if (attackResult.success) {
         logger.info(`${reports[0].numberOfShipsNeeded} ships sent to ${reports[0].galaxy}:${reports[0].system}:${reports[0].position}`)
