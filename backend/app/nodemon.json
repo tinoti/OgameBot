@@ -20,12 +20,15 @@
     "APP_ENV": "local",
     "LOG_LEVEL": "debug",
     "PORT": 3031,
-    "EMAIL": "vatomasic@gmail.com",
-    "PASSWORD": "strongh0ld",
+    "EMAIL": "croplay@gmail.com",
+    "PASSWORD": "HAtece2681!1",
     "SERVER_LANGUAGE": "de",
-    "SERVER_NUMBER": 105,
+    "SERVER_NUMBER": 115,
     "LOOT_PERCENTAGE": 0.75,
-    "SMALL_CARGO_STORAGE": 7000
+    "SMALL_CARGO_STORAGE": 7000,
+    "FLEET_SLOTS": 14,
+    "FIRST_PLANET": "39364811",
+    "SECOND_PLANET": "39367010"
   },
   "ext": "js,json,ts"
 }
