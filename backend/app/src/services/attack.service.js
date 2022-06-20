@@ -6,9 +6,45 @@ const { extractSpyReportData } = require('../util/extract');
 const xml2js = require('xml2js');
 const dayjs = require("dayjs");
 const logger = require('../util/logger');
+const { setActivePlanet } = require('../request/attack.request');
+
+
 
 
 let token = ""
+
+const userPlanets = [
+  {
+    galaxy: 2,
+    startSystem: 226,
+    systemLeftCurrent: 226,
+    systemRightCurrent: 226,
+    systemLeft: 206,
+    systemRight: 246,
+    position: 8,
+    id: 39367010
+  },
+  {
+    galaxy: 3,
+    startSystem: 206,
+    systemLeftCurrent: 206,
+    systemRightCurrent: 206,
+    systemLeft: 186,
+    systemRight: 236,
+    position: 8,
+    id: 39370115
+  },
+  {
+    galaxy: 5,
+    startSystem: 33,
+    systemLeftCurrent: 33,
+    systemRightCurrent: 33,
+    systemLeft: 13,
+    systemRight: 53,
+    position: 8,
+    id: 39369860
+  }
+]
 
 // Goes through all pages in the messages tab and returns all spy reports data in array of JSON objects
 //TODO: extract formating total loot and number of ships to different function so it can be passed any ship (here it only calculates for small cargoes)
@@ -62,8 +98,25 @@ const getSpyReports = async () => {
 //If you can also get flight time then you can divide total RU with flight time and get RU gain per minute for each potentional attack
 //That way we can find the best targets
 const sortSpyReports = async () => {
-  const reports = await getSpyReports()
-  reports.sort((a, b) => b.availableLoot - a.availableLoot)
+  let reports = await getSpyReports()
+
+
+  reports.forEach(report => {
+    // Calculate resource units
+    report.resourceUnits = report.metal + report.crystal * 2 + report.deut * 3
+
+    // Get distance
+    const attackingPlanet = userPlanets.find(o => o.galaxy === report.galaxy)
+    report.distance = 2700 + 95 * Math.abs(attackingPlanet.startSystem - report.system)
+    if (report.system === attackingPlanet.startSystem) report.distance = 1000 + 5 * (Math.abs(report.position - attackingPlanet.position))
+    report.flightDuration = (((10 + 3500 * Math.sqrt((10 * report.distance) / 28000)) / 4) / 60) * 2
+    report.resourceUnitsPerMinute = report.resourceUnits / report.flightDuration
+    report.resourcesPerMinute = report.availableLoot / report.flightDuration
+  })
+
+
+  reports.sort((a, b) => b.resourceUnitsPerMinute - a.resourceUnitsPerMinute)
+
 
   // reports.sort((a, b) => b.deut - a.deut)
   return reports
@@ -266,102 +319,182 @@ const getInactiveTargets = async () => {
     })
   })
 
-  // Sort inactive planets
+  // Sort inactive planets in "rings" of 20 fields left and right from each planet in the galaxy. 
+  let systemModifier = 20
+  let sortedInactivePlanets = []
+
+  // const userPlanets = [
+  //   {
+  //     galaxy: 1,
+  //     startSystem: 155,
+  //     systemLeftCurrent: 155,
+  //     systemRightCurrent: 155,
+  //     systemLeft: 135,
+  //     systemRight: 175,
+  //     position: 8
+  //   },
+  //   // {
+  //   //   galaxy: 2,
+  //   //   startSystem: 226,
+  //   //   systemLeftCurrent: 226,
+  //   //   systemRightCurrent: 226,
+  //   //   systemLeft: 206,
+  //   //   systemRight: 246,
+  //   //   position: 8
+  //   // }
+  //   {
+  //     galaxy: 5,
+  //     startSystem: 33,
+  //     systemLeftCurrent: 33,
+  //     systemRightCurrent: 33,
+  //     systemLeft: 13,
+  //     systemRight: 53,
+  //     position: 8
+  //   }
+  // ]
+
   inactivePlanets.sort((a, b) => a.galaxy - b.galaxy || a.system - b.system || a.position - b.position)
 
-  return inactivePlanets
+  for (let i = 0; i < 5; i++) {
+    userPlanets.forEach(planet => {
+
+      // If we went around the galaxy, from 1 to 499
+      if (planet.systemLeft <= 0) {
+        planet.systemLeft = 499 + planet.systemLeft
+        const leftInactives = inactivePlanets.filter(o => o.galaxy === planet.galaxy && ((o.system >= 1 && o.system <= planet.systemLeftCurrent) || (o.system >= planet.systemLeft && o.system <= 499)))
+        sortedInactivePlanets = sortedInactivePlanets.concat(leftInactives)
+        planet.systemLeftCurrent = planet.systemLeft
+        planet.systemLeft -= systemModifier
+      } else {
+        const leftInactives = inactivePlanets.filter(o => o.galaxy === planet.galaxy && o.system >= planet.systemLeft && o.system < planet.systemLeftCurrent)
+        sortedInactivePlanets = sortedInactivePlanets.concat(leftInactives)
+        planet.systemLeftCurrent -= systemModifier
+        planet.systemLeft -= systemModifier
+      }
+
+      // If we went from 499 to 1
+      if (planet.systemRight > 499) {
+        planet.systemRight = planet.systemRight - 499
+        const rightInactives = inactivePlanets.filter(o => o.galaxy && ((o.system >= planet.systemRight && o.system <= 499) || (o.system >= 1 && o.system <= planet.systemRight)))
+        sortedInactivePlanets = sortedInactivePlanets.concat(rightInactives)
+        planet.systemRightCurrent = planet.systemRight
+        planet.systemRight += systemModifier
+      } else {
+        const rightInactives = inactivePlanets.filter(o => o.galaxy === planet.galaxy && o.system >= planet.systemRightCurrent && o.system < planet.systemRight)
+        sortedInactivePlanets = sortedInactivePlanets.concat(rightInactives)
+        planet.systemRightCurrent += systemModifier
+        planet.systemRight += systemModifier
+      }
+
+
+    })
+  }
+
+
+
+  return sortedInactivePlanets
 }
 
 
 const spyAndAttack = async () => {
 
-  const mainPlanetId = "39364811"
-  const colonyId = "39367010"
+  const inactiveTargets = await getInactiveTargets()
 
-  let activePlanetId = "39364811"
+  let activePlanet = userPlanets[1]
 
-  const inactiveTargets = (await getInactiveTargets()).filter(o => o.galaxy > 1)
+  let errorCount = 0
+  let attackCount = 0
+
 
   while (true) {
+    try {
+      //Get and filter reports
+      //TODO: delete all invalid reports
+      const reports = (await sortSpyReports()).filter(o => o.resourceUnitsPerMinute > 180000)
+
+      const fleetSlots = await getFleetSlotsInfo()
 
 
-    //Get and filter reports
-    //TODO: delete all invalid reports
-    const reports = (await sortSpyReports()).filter(o => o.availableLoot > 3000000)
 
-    const fleetSlots = await getFleetSlotsInfo()
-
-
-
-    // If there is no valid targets, send spy probe to next target
-    if (reports.length === 0) {
-      const sendSpyProbe = JSON.parse(await attackRequest.sendSpyProbe(inactiveTargets[0].galaxy, inactiveTargets[0].system, inactiveTargets[0].position, token))
-      console.log(sendSpyProbe)
-      if (sendSpyProbe.response.success) {
-        logger.info(`Spy probe sent to ${inactiveTargets[0].galaxy}:${inactiveTargets[0].system}:${inactiveTargets[0].position}\n`)
-        token = sendSpyProbe.newToken
-        inactiveTargets.shift()
-        await new Promise(resolve => setTimeout(resolve, 2000))
+      // If there is no valid targets, send spy probe to next target
+      if (reports.length === 0) {
+        if (activePlanet.galaxy != inactiveTargets[0].galaxy) {
+          activePlanet = userPlanets.find(o => o.galaxy === inactiveTargets[0].galaxy)
+          await setActivePlanet(activePlanet.id)
+        }
+        const sendSpyProbe = JSON.parse(await attackRequest.sendSpyProbe(inactiveTargets[0].galaxy, inactiveTargets[0].system, inactiveTargets[0].position, token))
+        if (sendSpyProbe.response.success) {
+          logger.info(`Spy probe sent to ${inactiveTargets[0].galaxy}:${inactiveTargets[0].system}:${inactiveTargets[0].position}\n`)
+          console.log(`Error count: ${errorCount}, attack count: ${attackCount}`)
+          token = sendSpyProbe.newToken
+          inactiveTargets.shift()
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+        else if (!sendSpyProbe.response.success) {
+          // logger.info(`Error while attempting to send spy probe: ${sendSpyProbe.response.message}\n Trying again in 5 seconds.\n`)
+          token = sendSpyProbe.newToken
+          await new Promise(resolve => setTimeout(resolve, 5000))
+        }
       }
-      else if (!sendSpyProbe.response.success) {
-        logger.info(`Error while attempting to send spy probe: ${sendSpyProbe.response.message}\n Trying again in 5 seconds.\n`)
-        token = sendSpyProbe.newToken
-        await new Promise(resolve => setTimeout(resolve, 5000))
+
+
+      const fleetComposition = await attackRequest.getFleetInfoEvent()
+      if (reports.length > 0 && fleetSlots.attack + fleetSlots.colonisation + fleetSlots.transport < process.env.FLEET_SLOTS - 1 && fleetComposition.smallTransporter > reports[0].numberOfShipsNeeded) {
+        // Set active planet to the target galaxy
+        if (activePlanet.galaxy != reports[0].galaxy) {
+          activePlanet = userPlanets.find(o => o.galaxy === reports[0].galaxy)
+          await setActivePlanet(activePlanet.id)
+        }
+
+        const attackResult = JSON.parse(await attackRequest.attack(reports[0].galaxy, reports[0].system, reports[0].position, reports[0].numberOfShipsNeeded, token))
+        if (attackResult.success) {
+          logger.info(`${reports[0].numberOfShipsNeeded} ships sent to ${reports[0].galaxy}:${reports[0].system}:${reports[0].position},\nLoot: ${reports[0].availableLoot}\nFlight time: ${reports[0].flightDuration}\nResource per minute: ${reports[0].resourcesPerMinute}`)
+          attackCount++
+          console.log(`Error count: ${errorCount}, attack count: ${attackCount}`)
+          token = attackResult.newAjaxToken
+          const test = await attackRequest.deleteSpyReport(reports[0].messageId, attackResult.newAjaxToken)
+          await new Promise(resolve => setTimeout(resolve, 10000))
+        } else if (!attackResult.success) {
+          token = attackResult.newAjaxToken
+          await new Promise(resolve => setTimeout(resolve, 10000))
+        }
+
+      } else {
+        if (activePlanet.galaxy != inactiveTargets[0].galaxy) {
+          activePlanet = userPlanets.find(o => o.galaxy === inactiveTargets[0].galaxy)
+          await setActivePlanet(activePlanet.id)
+        }
+        const sendSpyProbe = JSON.parse(await attackRequest.sendSpyProbe(inactiveTargets[0].galaxy, inactiveTargets[0].system, inactiveTargets[0].position, token))
+        if (sendSpyProbe.response.success) {
+          logger.info(`Spy probe sent to ${inactiveTargets[0].galaxy}:${inactiveTargets[0].system}:${inactiveTargets[0].position}\n`)
+          console.log(`Error count: ${errorCount}, attack count: ${attackCount}`)
+          token = sendSpyProbe.newToken
+          inactiveTargets.shift()
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+        else if (!sendSpyProbe.response.success) {
+          // logger.info(`Error while attempting to send spy probe: ${sendSpyProbe.response.message}\n Trying again in 5 seconds.\n`)
+          token = sendSpyProbe.newToken
+          await new Promise(resolve => setTimeout(resolve, 5000))
+        }
       }
+    } catch (error) {
+      console.log("Error, trying to login again")
+      const setupService = require("./setup.service")
+      const request = require("../util/request")
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      errorCount++
+      const cookie = await setupService.login(process.env.EMAIL, process.env.PASSWORD)
+      logger.info("Successfully logged in with account: " + process.env.EMAIL)
+    
+      const loginUrl = await setupService.getLoginUrl()
+      logger.info("Successfully logged in to server: " + loginUrl)
+    
+      const page = await setupService.startPuppeteer(loginUrl, cookie)
+      request.setPage(page)
+      logger.info("Successfully started puppeteer page")
+      logger.info("Setup complete!")
     }
-
-
-    const fleetComposition = await attackRequest.getFleetInfoEvent()
-    if (reports.length > 0 && fleetSlots.attack + fleetSlots.colonisation + fleetSlots.transport < process.env.FLEET_SLOTS - 1 && fleetComposition.smallTransporter > reports[0].numberOfShipsNeeded) {
-      // Set active planet to the target galaxy
-      if(reports[0].galaxy === "3" && activePlanetId != mainPlanetId)  {
-        console.log("HERE")
-        activePlanetId = mainPlanetId
-        await attackRequest.setActivePlanet(mainPlanetId)
-      }
-      if(reports[0].galaxy === "2" && activePlanetId != colonyId) {
-        console.log("HERE BEFORE SETING ACTIVE PLANET GALAXY 2")
-        activePlanetId = colonyId
-        await attackRequest.setActivePlanet(colonyId)
-      }
-      console.log("REPORT")
-      console.log(reports[0].galaxy)
-      console.log(activePlanetId)
-
-      const attackResult = JSON.parse(await attackRequest.attack(reports[0].galaxy, reports[0].system, reports[0].position, reports[0].numberOfShipsNeeded, token))
-      if (attackResult.success) {
-        logger.info(`${reports[0].numberOfShipsNeeded} ships sent to ${reports[0].galaxy}:${reports[0].system}:${reports[0].position}`)
-        token = attackResult.newAjaxToken
-        const test = await attackRequest.deleteSpyReport(reports[0].messageId, attackResult.newAjaxToken)
-        console.log("DELETE SPY REPORT RESULT")
-        console.log(test)
-        await new Promise(resolve => setTimeout(resolve, 10000))
-      } else if (!attackResult.success) {
-        console.log("FAILED ATTACK")
-        console.log(attackResult)
-        token = attackResult.newAjaxToken
-        await new Promise(resolve => setTimeout(resolve, 10000))
-      }
-
-    } else {
-      const sendSpyProbe = JSON.parse(await attackRequest.sendSpyProbe(inactiveTargets[0].galaxy, inactiveTargets[0].system, inactiveTargets[0].position, token))
-      console.log(sendSpyProbe)
-      if (sendSpyProbe.response.success) {
-        logger.info(`Spy probe sent to ${inactiveTargets[0].galaxy}:${inactiveTargets[0].system}:${inactiveTargets[0].position}\n`)
-        token = sendSpyProbe.newToken
-        inactiveTargets.shift()
-        await new Promise(resolve => setTimeout(resolve, 2000))
-      }
-      else if (!sendSpyProbe.response.success) {
-        logger.info(`Error while attempting to send spy probe: ${sendSpyProbe.response.message}\n Trying again in 5 seconds.\n`)
-        token = sendSpyProbe.newToken
-        await new Promise(resolve => setTimeout(resolve, 5000))
-      }
-    }
-
-
-
-
 
 
 
@@ -393,7 +526,8 @@ module.exports = {
   attack,
   autoAttack,
   getPlanetList,
-  spyAndAttack
+  spyAndAttack,
+  getInactiveTargets
 }
 
 // TO DO: AUTO attack sa špijuniranjem. Ideja je da se odredi minimalni iznos resursa za loot, te automatski krene špijunirat inaktivne od zadanih koordinata na gore

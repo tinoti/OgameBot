@@ -54,9 +54,9 @@ const extractSpyReportData = async ($) => {
       //Format object
       const reportData = {
         messageId: messageId,
-        galaxy: location.galaxy,
-        system: location.system,
-        position: location.position,
+        galaxy: parseInt(location.galaxy),
+        system: parseInt(location.system),
+        position: parseInt(location.position),
         metal: resources[0],
         crystal: resources[1],
         deut: resources[2]
