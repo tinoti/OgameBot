@@ -15,12 +15,22 @@ let token = ""
 
 const userPlanets = [
   {
+    galaxy: 1,
+    startSystem: 109,
+    systemLeftCurrent: 109,
+    systemRightCurrent: 109,
+    systemLeft: 99,
+    systemRight: 119,
+    position: 8,
+    id: 39376278
+  },
+  {
     galaxy: 2,
     startSystem: 226,
     systemLeftCurrent: 226,
     systemRightCurrent: 226,
-    systemLeft: 206,
-    systemRight: 246,
+    systemLeft: 216,
+    systemRight: 236,
     position: 8,
     id: 39367010
   },
@@ -29,8 +39,8 @@ const userPlanets = [
     startSystem: 206,
     systemLeftCurrent: 206,
     systemRightCurrent: 206,
-    systemLeft: 186,
-    systemRight: 236,
+    systemLeft: 196,
+    systemRight: 226,
     position: 8,
     id: 39370115
   },
@@ -39,8 +49,8 @@ const userPlanets = [
     startSystem: 33,
     systemLeftCurrent: 33,
     systemRightCurrent: 33,
-    systemLeft: 13,
-    systemRight: 53,
+    systemLeft: 23,
+    systemRight: 43,
     position: 8,
     id: 39369860
   }
@@ -320,7 +330,7 @@ const getInactiveTargets = async () => {
   })
 
   // Sort inactive planets in "rings" of 20 fields left and right from each planet in the galaxy. 
-  let systemModifier = 20
+  let systemModifier = 10
   let sortedInactivePlanets = []
 
   // const userPlanets = [
@@ -400,7 +410,7 @@ const spyAndAttack = async () => {
 
   const inactiveTargets = await getInactiveTargets()
 
-  let activePlanet = userPlanets[1]
+  let activePlanet = userPlanets[0]
 
   let errorCount = 0
   let attackCount = 0
@@ -410,7 +420,7 @@ const spyAndAttack = async () => {
     try {
       //Get and filter reports
       //TODO: delete all invalid reports
-      const reports = (await sortSpyReports()).filter(o => o.resourceUnitsPerMinute > 180000)
+      const reports = (await sortSpyReports()).filter(o => o.resourceUnitsPerMinute > 150000)
 
       const fleetSlots = await getFleetSlotsInfo()
 
@@ -480,6 +490,7 @@ const spyAndAttack = async () => {
       }
     } catch (error) {
       console.log("Error, trying to login again")
+      console.log(error)
       const setupService = require("./setup.service")
       const request = require("../util/request")
       await new Promise(resolve => setTimeout(resolve, 5000))
