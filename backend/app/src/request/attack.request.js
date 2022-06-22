@@ -96,6 +96,32 @@ const getFleetSlotsInfo = async () => {
   return await request.ajaxGet(url)
 }
 
+const sendExpedition = async (galaxy, system, token) => {
+  const url = "https://s115-de.ogame.gameforge.com/game/index.php?page=ingame&component=fleetdispatch&action=sendFleet&ajax=1&asJson=1"
+
+
+  return await request.ajaxPost(url, {
+    token: token,
+    am204: 1000,
+    am203: 500,
+    galaxy: galaxy,
+    system: system,
+    position: 16,
+    type: 1,
+    metal: 0,
+    crystal: 0,
+    deuterium: 0,
+    prioMetal: 1,
+    prioCrystal: 2,
+    prioDeuterium: 3,
+    mission: 15,
+    speed: 10,
+    retreatAfterDefenderRetreat: 0,
+    union: 0,
+    holdingtime: 1
+  })
+}
+
 module.exports = {
   getMessagePage,
   getReportData,
@@ -108,5 +134,6 @@ module.exports = {
   getFleetSlotsInfo,
   getPlanetList,
   setActivePlanet,
-  getFleetInfoEvent
+  getFleetInfoEvent,
+  sendExpedition
 }

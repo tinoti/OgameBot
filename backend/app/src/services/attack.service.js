@@ -22,7 +22,8 @@ const userPlanets = [
     systemLeft: 99,
     systemRight: 119,
     position: 8,
-    id: 39376278
+    id: 39376278,
+    expeditionsSent: 0
   },
   {
     galaxy: 2,
@@ -32,7 +33,8 @@ const userPlanets = [
     systemLeft: 216,
     systemRight: 236,
     position: 8,
-    id: 39367010
+    id: 39367010,
+    expeditionsSent: 0
   },
   {
     galaxy: 3,
@@ -42,7 +44,8 @@ const userPlanets = [
     systemLeft: 196,
     systemRight: 226,
     position: 8,
-    id: 39370115
+    id: 39370115,
+    expeditionsSent: 0
   },
   {
     galaxy: 5,
@@ -52,7 +55,8 @@ const userPlanets = [
     systemLeft: 23,
     systemRight: 43,
     position: 8,
-    id: 39369860
+    id: 39369860,
+    expeditionsSent: 0
   }
 ]
 
@@ -408,13 +412,16 @@ const getInactiveTargets = async () => {
 
 const spyAndAttack = async () => {
 
-  const inactiveTargets = await getInactiveTargets()
+  const reports = await sortSpyReports()
+
+  // If there already is a report of inactive target, it means that it was already scanned so we don't have to spy that target again
+  const inactiveTargets = (await getInactiveTargets()).filter(o => !(reports.find(report => report.galaxy === o.galaxy && report.system === o.system && report.position === o.position)))
 
   let activePlanet = userPlanets[0]
 
   let errorCount = 0
   let attackCount = 0
-
+  let expeditionCount = 0
 
   while (true) {
     try {
@@ -424,7 +431,28 @@ const spyAndAttack = async () => {
 
       const fleetSlots = await getFleetSlotsInfo()
 
+      // First, check for free expedition and send one if possible
+      if (fleetSlots.expedition < 4 && fleetSlots.attack + fleetSlots.transport + fleetSlots.colonisation - 1 < process.env.FLEET_SLOTS) {
 
+        // Sort by planet which has least expedition sent, that way each solar system will have time to recharge expeditions
+        userPlanets.sort((a, b) => a.expeditionsSent - b.expeditionsSent)
+        activePlanet = userPlanets[0]
+        await setActivePlanet(activePlanet.id)
+        const expeditionResult = JSON.parse(await attackRequest.sendExpedition(activePlanet.galaxy, activePlanet.startSystem, token))
+        if (expeditionResult.success) {
+          logger.info(`Expedition sent to ${activePlanet.galaxy}:${activePlanet.startSystem}:16,`)
+          expeditionCount++
+          userPlanets[0].expeditionsSent++
+          console.log(`Error count: ${errorCount}, attack count: ${attackCount}, expedition count: ${expeditionCount}\n`)
+          token = expeditionResult.newAjaxToken
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        } else if (!expeditionResult.success) {
+          token = expeditionResult.newAjaxToken
+          await new Promise(resolve => setTimeout(resolve, 5000))
+        }
+
+        continue
+      }
 
       // If there is no valid targets, send spy probe to next target
       if (reports.length === 0) {
@@ -434,8 +462,8 @@ const spyAndAttack = async () => {
         }
         const sendSpyProbe = JSON.parse(await attackRequest.sendSpyProbe(inactiveTargets[0].galaxy, inactiveTargets[0].system, inactiveTargets[0].position, token))
         if (sendSpyProbe.response.success) {
-          logger.info(`Spy probe sent to ${inactiveTargets[0].galaxy}:${inactiveTargets[0].system}:${inactiveTargets[0].position}\n`)
-          console.log(`Error count: ${errorCount}, attack count: ${attackCount}`)
+          logger.info(`Spy probe sent to ${inactiveTargets[0].galaxy}:${inactiveTargets[0].system}:${inactiveTargets[0].position}`)
+          console.log(`Error count: ${errorCount}, attack count: ${attackCount}, expedition count: ${expeditionCount}\n`)
           token = sendSpyProbe.newToken
           inactiveTargets.shift()
           await new Promise(resolve => setTimeout(resolve, 2000))
@@ -460,13 +488,13 @@ const spyAndAttack = async () => {
         if (attackResult.success) {
           logger.info(`${reports[0].numberOfShipsNeeded} ships sent to ${reports[0].galaxy}:${reports[0].system}:${reports[0].position},\nLoot: ${reports[0].availableLoot}\nFlight time: ${reports[0].flightDuration}\nResource per minute: ${reports[0].resourcesPerMinute}`)
           attackCount++
-          console.log(`Error count: ${errorCount}, attack count: ${attackCount}`)
+          console.log(`Error count: ${errorCount}, attack count: ${attackCount}, expedition count: ${expeditionCount}\n`)
           token = attackResult.newAjaxToken
           const test = await attackRequest.deleteSpyReport(reports[0].messageId, attackResult.newAjaxToken)
-          await new Promise(resolve => setTimeout(resolve, 10000))
+          await new Promise(resolve => setTimeout(resolve, 5000))
         } else if (!attackResult.success) {
           token = attackResult.newAjaxToken
-          await new Promise(resolve => setTimeout(resolve, 10000))
+          await new Promise(resolve => setTimeout(resolve, 5000))
         }
 
       } else {
@@ -477,7 +505,7 @@ const spyAndAttack = async () => {
         const sendSpyProbe = JSON.parse(await attackRequest.sendSpyProbe(inactiveTargets[0].galaxy, inactiveTargets[0].system, inactiveTargets[0].position, token))
         if (sendSpyProbe.response.success) {
           logger.info(`Spy probe sent to ${inactiveTargets[0].galaxy}:${inactiveTargets[0].system}:${inactiveTargets[0].position}\n`)
-          console.log(`Error count: ${errorCount}, attack count: ${attackCount}`)
+          console.log(`Error count: ${errorCount}, attack count: ${attackCount}, expedition count: ${expeditionCount}\n`)
           token = sendSpyProbe.newToken
           inactiveTargets.shift()
           await new Promise(resolve => setTimeout(resolve, 2000))
@@ -497,10 +525,10 @@ const spyAndAttack = async () => {
       errorCount++
       const cookie = await setupService.login(process.env.EMAIL, process.env.PASSWORD)
       logger.info("Successfully logged in with account: " + process.env.EMAIL)
-    
+
       const loginUrl = await setupService.getLoginUrl()
       logger.info("Successfully logged in to server: " + loginUrl)
-    
+
       const page = await setupService.startPuppeteer(loginUrl, cookie)
       request.setPage(page)
       logger.info("Successfully started puppeteer page")

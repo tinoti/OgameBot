@@ -27,8 +27,7 @@
     "LOOT_PERCENTAGE": 0.75,
     "SMALL_CARGO_STORAGE": 7000,
     "FLEET_SLOTS": 16,
-    "FIRST_PLANET": "39364811",
-    "SECOND_PLANET": "39367010"
+    "EXPEDITION_SLOTS": 5
   },
   "ext": "js,json,ts"
 }
