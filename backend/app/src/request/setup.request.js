@@ -29,9 +29,14 @@ const serverLogin = async (id, language, number) => {
   return data
 }
 
+const tryChallenge = async (challengeId) => {
+  return await axios.post(`https://image-drop-challenge.gameforge.com/challenge/${challengeId}/de-DE`, { answer: 1 })
+}
+
 module.exports = {
   login,
   setAxiosHeaders,
   getAccountData,
-  serverLogin
+  serverLogin,
+  tryChallenge
 }

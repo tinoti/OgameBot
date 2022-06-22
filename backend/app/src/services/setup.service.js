@@ -16,7 +16,25 @@ const login = async (email, password) => {
       password: password,
       platformGameId: "1dfd8e7e-6e1a-4eb1-8c64-03c3b62efd2f",
     }
-    const response = await setupRequest.login(postData)
+    let response
+    try {
+      
+      response = await setupRequest.login(postData)
+    } catch (error) {
+      console.log("Error while logging in, challenge required")
+      const challengeId = error.response.headers["gf-challenge-id"].split(";")[0]
+      const response = await setupRequest.tryChallenge(challengeId)
+      if(response.status === "presented") {
+        console.log("Challenge failed, trying again in 2 sec")
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        login(email, password)
+      }
+      else if (response.status === "solved") {
+        console.log("Challenge solved, continuing with login")
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        login(email,password)
+      }
+    }
 
     // If successful, login request return data should contain token and cookie
     const { token } = response.data;
@@ -29,6 +47,7 @@ const login = async (email, password) => {
     return xsrfCookieName
 
   } catch (error) {
+
     throw Error("Login failed: " + error)
   }
 }
