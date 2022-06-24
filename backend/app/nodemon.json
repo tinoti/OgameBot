@@ -27,7 +27,8 @@
     "LOOT_PERCENTAGE": 0.75,
     "SMALL_CARGO_STORAGE": 7000,
     "FLEET_SLOTS": 16,
-    "EXPEDITION_SLOTS": 5
+    "EXPEDITION_SLOTS": 5,
+    "HYPERSPACE_TECHNOLOGY": 8
   },
   "ext": "js,json,ts"
 }

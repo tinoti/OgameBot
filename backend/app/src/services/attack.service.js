@@ -424,8 +424,33 @@ const getInactiveTargets = async () => {
 const getFleetComposition = async () => {
   const html = await attackRequest.getFleetComposition()
   const $ = cheerio.load(html)
+  return {
+    smallTransporter: {amount: parseInt($(".transporterSmall .amount").attr("data-value")), cargo: 5000 + 5000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am202"},
+    largeTransporter: {amount: parseInt($(".transporterLarge .amount").attr("data-value")), cargo: 25000 + 25000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am203"},
+    lightFighter: {amount: parseInt($(".fighterLight .amount").attr("data-value")), cargo: 50 + 50 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am204"},
+    heavyFighter: {amount: parseInt($(".fighterHeavy .amount").attr("data-value")), cargo: 100 + 100 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am205"},
+    cruiser: {amount: parseInt($(".cruiser .amount").attr("data-value")), cargo: 800 + 800 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am206"},
+    battleship: {amount: parseInt($(".battleship .amount").attr("data-value")), cargo: 1500 + 1500 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am207"},
+    pathfinder: {amount: parseInt($(".explorer .amount").attr("data-value")), cargo: 10000 + 10000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am219"},
+    spyProbe: {amount: parseInt($(".espionageProbe .amount").attr("data-value")), cargo: 0, id: "am210"},
+  }
+}
 
-  console.log($(".transporterLarge .amount")).attr("data-value")
+const getPlanetResources = async () => {
+  const html = await attackRequest.getPlanetResources()
+  const $ = cheerio.load(html)
+
+  return {
+    metal: parseInt($("#resources_metal").attr("data-raw")),
+    crystal: parseInt($("#resources_crystal").attr("data-raw")),
+    deut: parseInt($("#resources_deuterium").attr("data-raw")),
+  }
+}
+
+const calculateTotalCargo = (fleetComposition) => {
+  for (const ship in fleetComposition) {
+    console.log(fleetComposition.ship.cargo)
+  }
 }
 
 
@@ -448,8 +473,9 @@ const spyAndAttack = async () => {
       activePlanet = userPlanets.find(o => o.galaxy === attack.galaxy && o.startSystem === attack.system && o.position === attack.position)
       await setActivePlanet(activePlanet.id)
       const fleetComposition = await getFleetComposition()
-      console.log("FLEET COMPO")
-      console.log(fleetComposition)
+      const planetResources = await getPlanetResources()
+      
+      const totalCargo = calculateTotalCargo(fleetComposition)
     })
   }
 
