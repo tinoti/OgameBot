@@ -20,17 +20,19 @@ const setAxiosHeaders = async (token, xsrfCookieName) => {
 }
 
 const getAccountData = async () => {
-  const { data } = await axios.get('/users/me/accounts');
+  const { data } = await axios.get('https://lobby.ogame.gameforge.com/api/users/me/accounts');
   return data
 }
 
 const serverLogin = async (id, language, number) => {
-  const { data } = await axios.get(`/users/me/loginLink?id=${id}&server[language]=${language}&server[number]=${number}&clickedButton=account_list`);
+  const { data } = await axios.get(`https://lobby.ogame.gameforge.com/api/users/me/loginLink?id=${id}&server[language]=${language}&server[number]=${number}&clickedButton=account_list`);
   return data
 }
 
 const tryChallenge = async (challengeId) => {
-  return await axios.post(`https://image-drop-challenge.gameforge.com/challenge/${challengeId}/de-DE`, { answer: 1 })
+  const url = `https://image-drop-challenge.gameforge.com/challenge/74231ce0-d666-4505-9e4c-83918844ea29/en-GB`
+  console.log(url)
+  return await axios.get(url)
 }
 
 module.exports = {

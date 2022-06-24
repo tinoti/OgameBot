@@ -1,6 +1,7 @@
 "use strict"
 const { setupRequest } = require("../request")
 const puppeteer = require("puppeteer")
+const utilRequest = require("../util/request")
 
 let ogamePage
 
@@ -18,24 +19,37 @@ const login = async (email, password) => {
     }
     let response
     try {
-      
+
       response = await setupRequest.login(postData)
     } catch (error) {
       console.log("Error while logging in, challenge required")
       const challengeId = error.response.headers["gf-challenge-id"].split(";")[0]
-      const response = await setupRequest.tryChallenge(challengeId)
-      if(response.status === "presented") {
-        console.log("Challenge failed, trying again in 2 sec")
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        login(email, password)
-      }
-      else if (response.status === "solved") {
-        console.log("Challenge solved, continuing with login")
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        login(email,password)
-      }
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      //Start puppeteer and open a new page
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
+
+      // //Set cookie
+      // await page.setCookie({
+      //   name: cookie,
+      //   value: cookie,
+      //   url: "https://s" + process.env.SERVER_NUMBER + "-" + process.env.SERVER_LANGUAGE + ".ogame.gameforge.com"
+      // })
+
+      await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.2.1.min.js' });
+      //Open ogame
+      await page.goto("https://lobby.ogame.gameforge.com/de_DE/");
+
+      const url = `https://image-drop-challenge.gameforge.com/challenge/${challengeId}/en-GB`
+
+      const result = await page.evaluate(async (url) => {
+        const $ = window.$; //otherwise the transpiler will rename it and won't work
+        return await $.get(url)
+      }, url)
     }
 
+    // console.log("HERE")
+    // console.log(response)
     // If successful, login request return data should contain token and cookie
     const { token } = response.data;
     const { xsrfCookieName } = response.config
@@ -47,7 +61,7 @@ const login = async (email, password) => {
     return xsrfCookieName
 
   } catch (error) {
-
+    // console.log(error)
     throw Error("Login failed: " + error)
   }
 }

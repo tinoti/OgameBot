@@ -23,8 +23,13 @@ const ajaxGet = async (url) => {
 
 const ajaxPost = async (url, data) => {
   const result = await page.evaluate(async (url, data) => {
-    const $ = window.$ //otherwise the transpiler will rename it and won't work
-    return await $.post(url, data)
+    try {
+      const $ = window.$ //otherwise the transpiler will rename it and won't work
+      return await $.post(url, data)
+      
+    } catch (error) {
+      return error
+    }
   }, url, data)
 
   // console.log(result)
