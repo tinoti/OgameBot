@@ -1,7 +1,7 @@
 "use strict"
 
 const cheerio = require('cheerio');
-const { attackRequest } = require("../request")
+const { attackRequest, setupRequest } = require("../request")
 const { extractSpyReportData } = require('../util/extract');
 const xml2js = require('xml2js');
 const dayjs = require("dayjs");
@@ -307,8 +307,11 @@ const getFleetSlotsInfo = async () => {
     if (fleetText === "Feindliche Flotte | Angreifen") {
       let destinationPlanet = $(fleet).find(".destCoords a").text()
       destinationPlanet = destinationPlanet.trim().replace("[", "").replace("]", "").split(":")
-      console.log("DEST PLANET")
-      console.log(destinationPlanet)
+      fleetSlotsInfo.enemyAttack.push({
+        galaxy: parseInt(destinationPlanet[0]),
+        system: parseInt(destinationPlanet[1]),
+        position: parseInt(destinationPlanet[2])
+      })
     }
 
   })
@@ -418,6 +421,13 @@ const getInactiveTargets = async () => {
   return sortedInactivePlanets
 }
 
+const getFleetComposition = async () => {
+  const html = await attackRequest.getFleetComposition()
+  const $ = cheerio.load(html)
+
+  console.log($(".transporterLarge .amount")).attr("data-value")
+}
+
 
 const spyAndAttack = async () => {
 
@@ -432,7 +442,16 @@ const spyAndAttack = async () => {
   let attackCount = 0
   let expeditionCount = 0
 
-  getFleetSlotsInfo()
+  const fleetSlotsInfo = await getFleetSlotsInfo()
+  if(fleetSlotsInfo.enemyAttack.length > 0) {
+    fleetSlotsInfo.enemyAttack.forEach(async attack => {
+      activePlanet = userPlanets.find(o => o.galaxy === attack.galaxy && o.startSystem === attack.system && o.position === attack.position)
+      await setActivePlanet(activePlanet.id)
+      const fleetComposition = await getFleetComposition()
+      console.log("FLEET COMPO")
+      console.log(fleetComposition)
+    })
+  }
 
   while (false) {
     try {
@@ -529,21 +548,9 @@ const spyAndAttack = async () => {
       }
     } catch (error) {
       console.log("Error, trying to login again")
-      console.log(error)
-      const setupService = require("./setup.service")
-      const request = require("../util/request")
-      await new Promise(resolve => setTimeout(resolve, 5000))
-      errorCount++
-      const cookie = await setupService.login(process.env.EMAIL, process.env.PASSWORD)
-      logger.info("Successfully logged in with account: " + process.env.EMAIL)
+      const bot = require('../../startup/bot');
 
-      const loginUrl = await setupService.getLoginUrl()
-      logger.info("Successfully logged in to server: " + loginUrl)
-
-      const page = await setupService.startPuppeteer(loginUrl, cookie)
-      request.setPage(page)
-      logger.info("Successfully started puppeteer page")
-      logger.info("Setup complete!")
+      bot.startBot()
     }
 
 

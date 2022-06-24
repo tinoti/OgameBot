@@ -122,6 +122,12 @@ const sendExpedition = async (galaxy, system, token) => {
   })
 }
 
+const getFleetComposition = async () => {
+  const url = "https://s115-de.ogame.gameforge.com/game/index.php?page=ingame&component=fleetdispatch"
+
+  return await request.ajaxGet(url)
+}
+
 module.exports = {
   getMessagePage,
   getReportData,
@@ -135,5 +141,6 @@ module.exports = {
   getPlanetList,
   setActivePlanet,
   getFleetInfoEvent,
-  sendExpedition
+  sendExpedition,
+  getFleetComposition
 }

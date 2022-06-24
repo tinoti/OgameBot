@@ -112,5 +112,6 @@ const startBot = async () => {
 
 
 module.exports = {
-  startBot
+  startBot,
+  doLogin
 }

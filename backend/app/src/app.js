@@ -13,7 +13,7 @@ require('express-async-errors')
 app.use(cors())
 //Login to ogame server and setup puppeteer
 require('../startup/routes')(app)
-require("../startup/bot").startBot()
+require("../startup/bot").doLogin()
 
 const port = commonUtil.normalizePort(process.env.PORT || '3031')
 app.set('port', port)
