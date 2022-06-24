@@ -291,7 +291,8 @@ const getFleetSlotsInfo = async () => {
     spy: 0,
     colonisation: 0,
     transport: 0,
-    expedition: 0
+    expedition: 0,
+    enemyAttack: []
   }
 
   $(".eventFleet").each((index, fleet) => {
@@ -302,6 +303,14 @@ const getFleetSlotsInfo = async () => {
     if (fleetText === "Eigene Flotte | Spionage (R)") fleetSlotsInfo.spy++
     if (fleetText === "Eigene Flotte | Transport (R)") fleetSlotsInfo.transport++
     if (fleetText === "Eigene Flotte | Expedition (R)") fleetSlotsInfo.expedition++
+
+    if (fleetText === "Feindliche Flotte | Angreifen") {
+      let destinationPlanet = $(fleet).find(".destCoords a").text()
+      destinationPlanet = destinationPlanet.trim().replace("[", "").replace("]", "").split(":")
+      console.log("DEST PLANET")
+      console.log(destinationPlanet)
+    }
+
   })
 
   return fleetSlotsInfo
@@ -423,7 +432,9 @@ const spyAndAttack = async () => {
   let attackCount = 0
   let expeditionCount = 0
 
-  while (true) {
+  getFleetSlotsInfo()
+
+  while (false) {
     try {
       //Get and filter reports
       //TODO: delete all invalid reports
@@ -432,7 +443,7 @@ const spyAndAttack = async () => {
       const fleetSlots = await getFleetSlotsInfo()
 
       // First, check for free expedition and send one if possible
-      if (fleetSlots.expedition < 4 && fleetSlots.attack + fleetSlots.transport + fleetSlots.colonisation - 1 < process.env.FLEET_SLOTS) {
+      if (fleetSlots.expedition < 4 && fleetSlots.attack + fleetSlots.transport + fleetSlots.colonisation + fleetSlots.expedition - 1 < process.env.FLEET_SLOTS) {
 
         // Sort by planet which has least expedition sent, that way each solar system will have time to recharge expeditions
         userPlanets.sort((a, b) => a.expeditionsSent - b.expeditionsSent)
