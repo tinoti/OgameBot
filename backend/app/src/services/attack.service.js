@@ -425,14 +425,14 @@ const getFleetComposition = async () => {
   const html = await attackRequest.getFleetComposition()
   const $ = cheerio.load(html)
   return {
-    smallTransporter: {amount: parseInt($(".transporterSmall .amount").attr("data-value")), cargo: 5000 + 5000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am202"},
-    largeTransporter: {amount: parseInt($(".transporterLarge .amount").attr("data-value")), cargo: 25000 + 25000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am203"},
-    lightFighter: {amount: parseInt($(".fighterLight .amount").attr("data-value")), cargo: 50 + 50 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am204"},
-    heavyFighter: {amount: parseInt($(".fighterHeavy .amount").attr("data-value")), cargo: 100 + 100 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am205"},
-    cruiser: {amount: parseInt($(".cruiser .amount").attr("data-value")), cargo: 800 + 800 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am206"},
-    battleship: {amount: parseInt($(".battleship .amount").attr("data-value")), cargo: 1500 + 1500 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am207"},
-    pathfinder: {amount: parseInt($(".explorer .amount").attr("data-value")), cargo: 10000 + 10000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am219"},
-    spyProbe: {amount: parseInt($(".espionageProbe .amount").attr("data-value")), cargo: 0, id: "am210"},
+    smallTransporter: { amount: parseInt($(".transporterSmall .amount").attr("data-value")), cargo: 5000 + 5000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am202" },
+    largeTransporter: { amount: parseInt($(".transporterLarge .amount").attr("data-value")), cargo: 25000 + 25000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am203" },
+    lightFighter: { amount: parseInt($(".fighterLight .amount").attr("data-value")), cargo: 50 + 50 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am204" },
+    heavyFighter: { amount: parseInt($(".fighterHeavy .amount").attr("data-value")), cargo: 100 + 100 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am205" },
+    cruiser: { amount: parseInt($(".cruiser .amount").attr("data-value")), cargo: 800 + 800 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am206" },
+    battleship: { amount: parseInt($(".battleship .amount").attr("data-value")), cargo: 1500 + 1500 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am207" },
+    pathfinder: { amount: parseInt($(".explorer .amount").attr("data-value")), cargo: 10000 + 10000 * 0.05 * process.env.HYPERSPACE_TECHNOLOGY, id: "am219" },
+    spyProbe: { amount: parseInt($(".espionageProbe .amount").attr("data-value")), cargo: 0, id: "am210" },
   }
 }
 
@@ -448,11 +448,56 @@ const getPlanetResources = async () => {
 }
 
 const calculateTotalCargo = (fleetComposition) => {
+  let totalCargo = 0
   for (const ship in fleetComposition) {
-    console.log(fleetComposition.ship.cargo)
+    console.log(fleetComposition[ship].cargo)
+    console.log(fleetComposition[ship].amount)
+    totalCargo += fleetComposition[ship].cargo * fleetComposition[ship].amount
   }
+
+  return totalCargo - 20000 // 20k for deut consuption
 }
 
+
+const calculateTotalCarriableResources = (totalCargo, planetResources) => {
+  let total = {
+    metal: 0,
+    crystal: 0,
+    deut: 0
+  }
+
+  if(planetResources.deut + planetResources.crystal + planetResources.metal < totalCargo) {
+    total.deut = planetResources.deut
+    total.metal = planetResources.metal
+    total.crystal = planetResources.crystal
+
+    return total
+  }
+
+  if(planetResources.deut > totalCargo) {
+    total.deut = totalCargo
+    return total
+  }
+
+  total.deut = planetResources.deut - 10000 // for consumption
+  totalCargo -= planetResources.deut
+
+  if(planetResources.crystal > totalCargo) {
+    total.crystal = totalCargo
+    return total
+  }
+
+  total.crystal = planetResources.crystal
+  totalCargo -= planetResources.crystal
+
+  if(planetResources.metal > totalCargo) {
+    total.metal = totalCargo
+    return total
+  }
+
+
+
+}
 
 const spyAndAttack = async () => {
 
@@ -468,14 +513,35 @@ const spyAndAttack = async () => {
   let expeditionCount = 0
 
   const fleetSlotsInfo = await getFleetSlotsInfo()
-  if(fleetSlotsInfo.enemyAttack.length > 0) {
+  if (fleetSlotsInfo.enemyAttack.length > 0) {
     fleetSlotsInfo.enemyAttack.forEach(async attack => {
       activePlanet = userPlanets.find(o => o.galaxy === attack.galaxy && o.startSystem === attack.system && o.position === attack.position)
       await setActivePlanet(activePlanet.id)
       const fleetComposition = await getFleetComposition()
       const planetResources = await getPlanetResources()
-      
-      const totalCargo = calculateTotalCargo(fleetComposition)
+
+      const totalCargo = calculateTotalCargo(fleetComposition) // If there is no fleet on planet, this will return NaN
+      const totalCarriableResources = calculateTotalCarriableResources(totalCargo, planetResources)
+      if (!totalCargo) {
+        console.log("No fleet on planet")
+      } else {
+        let fleetSavePostData = {
+          galaxy: activePlanet.galaxy,
+          system: activePlanet.systemStart,
+          position: activePlanet.position,
+          type: 3,
+          token: token,
+          union: 0
+        }
+        for (const ship in fleetComposition) {
+          fleetSavePostData[fleetComposition[ship].id] = fleetComposition[ship].amount
+        }
+
+        console.log("FLEET POST")
+        console.log(fleetSavePostData)
+        console.log(totalCarriableResources)
+
+      }
     })
   }
 
